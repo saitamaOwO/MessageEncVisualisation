@@ -164,7 +164,7 @@ export default function EncryptionPlayground() {
     }
   }
 
-  const getEncryptionStrength = (method) => {
+  const getEncryptionStrength = (method: string) => {
     switch (method) {
       case "aes":
         return 85
