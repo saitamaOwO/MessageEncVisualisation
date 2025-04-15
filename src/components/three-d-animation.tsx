@@ -6,16 +6,17 @@ import * as THREE from "three"
 interface ThreeDAnimationProps {
   method: string
   encryptionInProgress: boolean
+  encryptionComplete: boolean
 }
 
-export default function ThreeDAnimation({ method, encryptionInProgress }: ThreeDAnimationProps) {
+export default function ThreeDAnimation({ method, encryptionInProgress, encryptionComplete }: ThreeDAnimationProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<THREE.Scene | null>(null)
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const particlesRef = useRef<THREE.Points | null>(null)
-  const lockRef = useRef<THREE.Object3D | null>(null)
+  const lockRef = useRef<THREE.Group | null>(null)
   const keyRef = useRef<THREE.Group | null>(null)
 
   // Initialize Three.js scene
@@ -285,47 +286,177 @@ export default function ThreeDAnimation({ method, encryptionInProgress }: ThreeD
     const handleGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 32)
     const handleMaterial = new THREE.MeshStandardMaterial({ color: 0xf59e0b })
     const handle = new THREE.Mesh(handleGeometry, handleMaterial)
-    handle.position.set(0, 0, 0)
     keyGroup.add(handle)
 
-    // Key teeth
-    const teethGeometry = new THREE.BoxGeometry(0.1, 0.3, 0.1)
-    const teethMaterial = new THREE.MeshStandardMaterial({ color: 0x8b5cf6 })
-    const teeth = new THREE.Mesh(teethGeometry, teethMaterial)
-    teeth.position.set(0, 0.2, 0)
-    keyGroup.add(teeth)
+    // Key shaft
+    const shaftGeometry = new THREE.BoxGeometry(1, 0.1, 0.1)
+    const shaftMaterial = new THREE.MeshStandardMaterial({ color: 0xf59e0b })
+    const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial)
+    shaft.position.x = 0.5
+    keyGroup.add(shaft)
 
+    // Key teeth
+    for (let i = 0; i < 3; i++) {
+      const toothGeometry = new THREE.BoxGeometry(0.1, 0.2, 0.1)
+      const toothMaterial = new THREE.MeshStandardMaterial({ color: 0xf59e0b })
+      const tooth = new THREE.Mesh(toothGeometry, toothMaterial)
+      tooth.position.set(0.3 + i * 0.3, -0.15, 0)
+      keyGroup.add(tooth)
+    }
+
+    keyGroup.position.set(-1.5, 0, 0)
     keyRef.current = keyGroup
     sceneRef.current.add(keyGroup)
+
+    // Create lock
+    const lockGroup = new THREE.Group()
+
+    // Lock body
+    const lockBodyGeometry = new THREE.BoxGeometry(0.8, 1, 0.4)
+    const lockBodyMaterial = new THREE.MeshStandardMaterial({ color: 0x64748b })
+    const lockBody = new THREE.Mesh(lockBodyGeometry, lockBodyMaterial)
+    lockGroup.add(lockBody)
+
+    // Lock shackle
+    const shackleGeometry = new THREE.TorusGeometry(0.3, 0.08, 16, 32, Math.PI)
+    const shackleMaterial = new THREE.MeshStandardMaterial({ color: 0x64748b })
+    const shackle = new THREE.Mesh(shackleGeometry, shackleMaterial)
+    shackle.position.y = 0.5
+    shackle.rotation.x = Math.PI / 2
+    lockGroup.add(shackle)
+
+    // Lock keyhole
+    const keyholeGeometry = new THREE.CircleGeometry(0.1, 32)
+    const keyholeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 })
+    const keyhole = new THREE.Mesh(keyholeGeometry, keyholeMaterial)
+    keyhole.position.set(0, 0, 0.21)
+    lockGroup.add(keyhole)
+
+    lockGroup.position.set(1.5, 0, 0)
+    lockRef.current = lockGroup
+    sceneRef.current.add(lockGroup)
   }
 
   const createPgpObjects = () => {
     if (!sceneRef.current) return
 
-    // Create a group of particles representing PGP
-    const pgpGroup = new THREE.Group()
-    // Create particles...
-    // Add particles to the group...
+    // Create an envelope for PGP
+    const envelopeGroup = new THREE.Group()
 
-    sceneRef.current.add(pgpGroup)
+    // Envelope body
+    const envelopeGeometry = new THREE.BoxGeometry(2, 1.5, 0.1)
+    const envelopeMaterial = new THREE.MeshStandardMaterial({ color: 0xf8fafc })
+    const envelope = new THREE.Mesh(envelopeGeometry, envelopeMaterial)
+    envelopeGroup.add(envelope)
+
+    // Envelope flap
+    const flapGeometry = new THREE.BufferGeometry()
+    const flapVertices = new Float32Array([
+      -1,
+      0.75,
+      0.05, // top left
+      1,
+      0.75,
+      0.05, // top right
+      0,
+      0,
+      0.05, // bottom center
+    ])
+    flapGeometry.setAttribute("position", new THREE.BufferAttribute(flapVertices, 3))
+    flapGeometry.computeVertexNormals()
+
+    const flapMaterial = new THREE.MeshStandardMaterial({ color: 0xe2e8f0 })
+    const flap = new THREE.Mesh(flapGeometry, flapMaterial)
+    envelopeGroup.add(flap)
+
+    // Seal
+    const sealGeometry = new THREE.CircleGeometry(0.3, 32)
+    const sealMaterial = new THREE.MeshStandardMaterial({ color: 0x8b5cf6 })
+    const seal = new THREE.Mesh(sealGeometry, sealMaterial)
+    seal.position.set(0, 0, 0.06)
+    seal.rotation.x = Math.PI
+    envelopeGroup.add(seal)
+
+    lockRef.current = envelopeGroup
+    sceneRef.current.add(envelopeGroup)
   }
 
   const createTlsObjects = () => {
     if (!sceneRef.current) return
 
-    // Create a grid representing TLS
-    const tlsGroup = new THREE.Group()
-    // Create grid...
-    // Add grid to the group...
+    // Create a padlock for TLS
+    const padlockGroup = new THREE.Group()
 
-    sceneRef.current.add(tlsGroup)
+    // Padlock body
+    const bodyGeometry = new THREE.BoxGeometry(1.2, 1.5, 0.6)
+    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xec4899 })
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
+    padlockGroup.add(body)
+
+    // Padlock shackle
+    const shackleGeometry = new THREE.TorusGeometry(0.4, 0.1, 16, 32, Math.PI)
+    const shackleMaterial = new THREE.MeshStandardMaterial({ color: 0xd946ef })
+    const shackle = new THREE.Mesh(shackleGeometry, shackleMaterial)
+    shackle.position.y = 0.75
+    shackle.rotation.x = Math.PI / 2
+    padlockGroup.add(shackle)
+
+    // Padlock keyhole
+    const keyholeGeometry = new THREE.CircleGeometry(0.15, 32)
+    const keyholeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 })
+    const keyhole = new THREE.Mesh(keyholeGeometry, keyholeMaterial)
+    keyhole.position.set(0, 0, 0.31)
+    padlockGroup.add(keyhole)
+
+    // Add SSL certificate icon
+    const certGeometry = new THREE.PlaneGeometry(0.8, 0.8)
+    const certMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.9,
+    })
+    const cert = new THREE.Mesh(certGeometry, certMaterial)
+    cert.position.set(0, 0.3, 0.31)
+    padlockGroup.add(cert)
+
+    // Add checkmark on certificate
+    const checkGeometry = new THREE.BufferGeometry()
+    const checkVertices = new Float32Array([
+      -0.2,
+      0.3,
+      0.32, // start
+      -0.1,
+      0.2,
+      0.32, // middle
+      0.2,
+      0.5,
+      0.32, // end
+    ])
+    checkGeometry.setAttribute("position", new THREE.BufferAttribute(checkVertices, 3))
+
+    const checkMaterial = new THREE.LineBasicMaterial({ color: 0x10b981, linewidth: 3 })
+    const check = new THREE.Line(checkGeometry, checkMaterial)
+    padlockGroup.add(check)
+
+    lockRef.current = padlockGroup
+    sceneRef.current.add(padlockGroup)
   }
 
   const createDefaultObjects = () => {
-    // Default objects or fallback if no method
+    if (!sceneRef.current) return
+
+    // Create a simple sphere
+    const geometry = new THREE.SphereGeometry(1, 32, 32)
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x3b82f6,
+      transparent: true,
+      opacity: 0.7,
+    })
+
+    const sphere = new THREE.Mesh(geometry, material)
+    lockRef.current = sphere
+    sceneRef.current.add(sphere)
   }
 
-  return (
-    <div ref={containerRef} style={{ width: "100%", height: "100vh" }}></div>
-  )
+  return <div ref={containerRef} className="w-full h-full" />
 }
