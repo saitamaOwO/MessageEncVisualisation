@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef} from "react"
 import * as THREE from "three"
 
 interface ThreeDAnimationProps {
@@ -16,7 +16,7 @@ export default function ThreeDAnimation({ method, encryptionInProgress, encrypti
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const particlesRef = useRef<THREE.Points | null>(null)
-  const lockRef = useRef<THREE.Group | null>(null)
+  const lockRef = useRef<THREE.Mesh | THREE.Group | null>(null)
   const keyRef = useRef<THREE.Group | null>(null)
 
   // Initialize Three.js scene
