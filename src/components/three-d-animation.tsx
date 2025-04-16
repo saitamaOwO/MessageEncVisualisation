@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef} from "react"
+import { useEffect, useRef, useCallback } from "react"
 import * as THREE from "three"
 
 interface ThreeDAnimationProps {
@@ -18,6 +18,77 @@ export default function ThreeDAnimation({ method, encryptionInProgress, encrypti
   const particlesRef = useRef<THREE.Points | null>(null)
   const lockRef = useRef<THREE.Mesh | THREE.Group | null>(null)
   const keyRef = useRef<THREE.Group | null>(null)
+
+  // Define createMethodSpecificObjects as useCallback
+  const createMethodSpecificObjects = useCallback((method: string) => {
+    if (!sceneRef.current) return
+
+    // Create particles
+    const particleCount = 1000
+    const particleGeometry = new THREE.BufferGeometry()
+    const particlePositions = new Float32Array(particleCount * 3)
+
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      // Create a sphere of particles
+      const radius = 3
+      const theta = Math.random() * Math.PI * 2
+      const phi = Math.acos(2 * Math.random() - 1)
+
+      particlePositions[i] = radius * Math.sin(phi) * Math.cos(theta)
+      particlePositions[i + 1] = radius * Math.sin(phi) * Math.sin(theta)
+      particlePositions[i + 2] = radius * Math.cos(phi)
+    }
+
+    particleGeometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3))
+
+    // Different particle colors for different methods
+    let particleColor: number
+    switch (method) {
+      case "aes":
+        particleColor = 0x10b981 // Green
+        break
+      case "rsa":
+        particleColor = 0xf59e0b // Amber
+        break
+      case "pgp":
+        particleColor = 0x8b5cf6 // Purple
+        break
+      case "tls":
+        particleColor = 0xec4899 // Pink
+        break
+      default:
+        particleColor = 0x3b82f6 // Blue
+    }
+
+    const particleMaterial = new THREE.PointsMaterial({
+      color: particleColor,
+      size: 0.05,
+      transparent: true,
+      opacity: 0.8,
+    })
+
+    const particles = new THREE.Points(particleGeometry, particleMaterial)
+    particlesRef.current = particles
+    sceneRef.current.add(particles)
+
+    // Create method-specific objects
+    switch (method) {
+      case "aes":
+        createAesObjects()
+        break
+      case "rsa":
+        createRsaObjects()
+        break
+      case "pgp":
+        createPgpObjects()
+        break
+      case "tls":
+        createTlsObjects()
+        break
+      default:
+        createDefaultObjects()
+    }
+  }, [])
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -98,6 +169,17 @@ export default function ThreeDAnimation({ method, encryptionInProgress, encrypti
               positions[i] *= 0.99
               positions[i + 2] *= 0.99
             }
+          } else if (encryptionComplete) {
+            // When encryption is complete, expand particles outward
+            const x = positions[i]
+            const y = positions[i + 1]
+            const z = positions[i + 2]
+            const distance = Math.sqrt(x * x + y * y + z * z)
+
+            if (distance < 3) {
+              positions[i] *= 1.01
+              positions[i + 2] *= 1.01
+            }
           }
         }
 
@@ -110,6 +192,9 @@ export default function ThreeDAnimation({ method, encryptionInProgress, encrypti
 
     animate()
 
+    // Save a reference to the container for cleanup
+    const currentContainer = containerRef.current
+
     // Cleanup
     return () => {
       window.removeEventListener("resize", handleResize)
@@ -118,8 +203,8 @@ export default function ThreeDAnimation({ method, encryptionInProgress, encrypti
         cancelAnimationFrame(animationFrameRef.current)
       }
 
-      if (rendererRef.current && containerRef.current) {
-        containerRef.current.removeChild(rendererRef.current.domElement)
+      if (rendererRef.current && currentContainer) {
+        currentContainer.removeChild(rendererRef.current.domElement)
       }
 
       // Dispose of geometries and materials
@@ -145,9 +230,9 @@ export default function ThreeDAnimation({ method, encryptionInProgress, encrypti
         rendererRef.current.dispose()
       }
     }
-  }, [])
+  }, [method, createMethodSpecificObjects, encryptionInProgress, encryptionComplete])
 
-  // Update when method changes
+  // Update when method or encryption status changes
   useEffect(() => {
     if (!sceneRef.current) return
 
@@ -169,77 +254,7 @@ export default function ThreeDAnimation({ method, encryptionInProgress, encrypti
 
     // Create new objects for the selected method
     createMethodSpecificObjects(method)
-  }, [method])
-
-  const createMethodSpecificObjects = (method: string) => {
-    if (!sceneRef.current) return
-
-    // Create particles
-    const particleCount = 1000
-    const particleGeometry = new THREE.BufferGeometry()
-    const particlePositions = new Float32Array(particleCount * 3)
-
-    for (let i = 0; i < particleCount * 3; i += 3) {
-      // Create a sphere of particles
-      const radius = 3
-      const theta = Math.random() * Math.PI * 2
-      const phi = Math.acos(2 * Math.random() - 1)
-
-      particlePositions[i] = radius * Math.sin(phi) * Math.cos(theta)
-      particlePositions[i + 1] = radius * Math.sin(phi) * Math.sin(theta)
-      particlePositions[i + 2] = radius * Math.cos(phi)
-    }
-
-    particleGeometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3))
-
-    // Different particle colors for different methods
-    let particleColor
-    switch (method) {
-      case "aes":
-        particleColor = 0x10b981 // Green
-        break
-      case "rsa":
-        particleColor = 0xf59e0b // Amber
-        break
-      case "pgp":
-        particleColor = 0x8b5cf6 // Purple
-        break
-      case "tls":
-        particleColor = 0xec4899 // Pink
-        break
-      default:
-        particleColor = 0x3b82f6 // Blue
-    }
-
-    const particleMaterial = new THREE.PointsMaterial({
-      color: particleColor,
-      size: 0.05,
-      transparent: true,
-      opacity: 0.8,
-    })
-
-    const particles = new THREE.Points(particleGeometry, particleMaterial)
-    particlesRef.current = particles
-    sceneRef.current.add(particles)
-
-    // Create method-specific objects
-    switch (method) {
-      case "aes":
-        createAesObjects()
-        break
-      case "rsa":
-        createRsaObjects()
-        break
-      case "pgp":
-        createPgpObjects()
-        break
-      case "tls":
-        createTlsObjects()
-        break
-      default:
-        createDefaultObjects()
-    }
-  }
+  }, [method, createMethodSpecificObjects])
 
   const createAesObjects = () => {
     if (!sceneRef.current) return

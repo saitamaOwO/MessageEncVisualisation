@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { motion } from "framer-motion"
 
 interface EncryptionVisualizerProps {
@@ -18,6 +18,77 @@ export default function EncryptionVisualizer({
 }: EncryptionVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [animating, setAnimating] = useState(false)
+
+  // Extract these functions from useEffect to avoid dependency issues
+  const drawPlaceholder = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
+    ctx.fillStyle = "#64748b"
+    ctx.font = "14px sans-serif"
+    ctx.textAlign = "center"
+    ctx.fillText("Encrypt a message to see visualization", canvas.width / 2, canvas.height / 2)
+  }, [])
+
+  const drawEncryptionAnimation = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      canvas: HTMLCanvasElement,
+      original: string,
+      encrypted: string,
+      progress: number,
+      method: string,
+    ) => {
+      const centerX = canvas.width / 2
+      const centerY = canvas.height / 2
+
+      // Draw method-specific visualization
+      switch (method) {
+        case "aes":
+          drawAesVisualization(ctx, canvas, progress)
+          break
+        case "rsa":
+          drawRsaVisualization(ctx, canvas, progress)
+          break
+        case "pgp":
+          drawPgpVisualization(ctx, canvas, progress)
+          break
+        case "tls":
+          drawTlsVisualization(ctx, canvas, progress)
+          break
+        default:
+          drawDefaultVisualization(ctx, canvas, progress)
+      }
+
+      // Draw text particles
+      const particleCount = 50
+      const radius = Math.min(canvas.width, canvas.height) * 0.4
+
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (i / particleCount) * Math.PI * 2
+        const x = centerX + Math.cos(angle) * radius * progress
+        const y = centerY + Math.sin(angle) * radius * progress
+
+        ctx.fillStyle = progress < 0.5 ? "#3b82f6" : "#10b981"
+        ctx.beginPath()
+        ctx.arc(x, y, 2, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    },
+    [],
+  )
+
+  const drawDecryptionAnimation = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      canvas: HTMLCanvasElement,
+      encrypted: string,
+      original: string,
+      progress: number,
+      method: string,
+    ) => {
+      // Similar to encryption but reverse
+      drawEncryptionAnimation(ctx, canvas, original, encrypted, 1 - progress, method)
+    },
+    [drawEncryptionAnimation],
+  )
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -76,71 +147,7 @@ export default function EncryptionVisualizer({
 
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
-  }, [originalText, encryptedText, isEncrypting, method])
-
-  const drawPlaceholder = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
-    ctx.fillStyle = "#64748b"
-    ctx.font = "14px sans-serif"
-    ctx.textAlign = "center"
-    ctx.fillText("Encrypt a message to see visualization", canvas.width / 2, canvas.height / 2)
-  }
-
-  const drawEncryptionAnimation = (
-    ctx: CanvasRenderingContext2D,
-    canvas: HTMLCanvasElement,
-    original: string,
-    encrypted: string,
-    progress: number,
-    method: string,
-  ) => {
-    const centerX = canvas.width / 2
-    const centerY = canvas.height / 2
-
-    // Draw method-specific visualization
-    switch (method) {
-      case "aes":
-        drawAesVisualization(ctx, canvas, progress)
-        break
-      case "rsa":
-        drawRsaVisualization(ctx, canvas, progress)
-        break
-      case "pgp":
-        drawPgpVisualization(ctx, canvas, progress)
-        break
-      case "tls":
-        drawTlsVisualization(ctx, canvas, progress)
-        break
-      default:
-        drawDefaultVisualization(ctx, canvas, progress)
-    }
-
-    // Draw text particles
-    const particleCount = 50
-    const radius = Math.min(canvas.width, canvas.height) * 0.4
-
-    for (let i = 0; i < particleCount; i++) {
-      const angle = (i / particleCount) * Math.PI * 2
-      const x = centerX + Math.cos(angle) * radius * progress
-      const y = centerY + Math.sin(angle) * radius * progress
-
-      ctx.fillStyle = progress < 0.5 ? "#3b82f6" : "#10b981"
-      ctx.beginPath()
-      ctx.arc(x, y, 2, 0, Math.PI * 2)
-      ctx.fill()
-    }
-  }
-
-  const drawDecryptionAnimation = (
-    ctx: CanvasRenderingContext2D,
-    canvas: HTMLCanvasElement,
-    encrypted: string,
-    original: string,
-    progress: number,
-    method: string,
-  ) => {
-    // Similar to encryption but reverse
-    drawEncryptionAnimation(ctx, canvas, original, encrypted, 1 - progress, method)
-  }
+  }, [originalText, encryptedText, isEncrypting, method, drawPlaceholder, drawEncryptionAnimation, drawDecryptionAnimation])
 
   const drawAesVisualization = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, progress: number) => {
     const gridSize = 8

@@ -1,9 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 
-export async function POST(request: NextRequest, { params }: { params: { method: string } }) {
-  // Await params before using it
-  const { method } = await params  // Ensure params is awaited
+export async function POST(request: NextRequest, { params }: { params: Promise<{ method: string }> }) {
+  const { method } = await params // Resolve the Promise to access the method property
 
   try {
     const { message, publicKey } = await request.json()

@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { AlertCircle, Lock, Unlock, Shield, Clock, FileText, Eye, EyeOff } from "lucide-react"
+import { AlertCircle, Lock, Unlock, Shield, Clock, FileText, Eye, EyeOff } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -41,12 +41,8 @@ export default function EncryptionPlayground() {
   })
   const [showPrivateKey, setShowPrivateKey] = useState(false)
 
-  // Generate keys when encryption method changes
-  useEffect(() => {
-    generateKeys()
-  }, [selectedMethod])
-
-  const generateKeys = async () => {
+  // Define generateKeys as useCallback to avoid dependency issues
+  const generateKeys = useCallback(async () => {
     setLoading(true)
     setError("")
 
@@ -72,7 +68,12 @@ export default function EncryptionPlayground() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedMethod])
+
+  // Generate keys when encryption method changes
+  useEffect(() => {
+    generateKeys()
+  }, [generateKeys])
 
   const encryptMessage = async () => {
     if (!message.trim()) {
