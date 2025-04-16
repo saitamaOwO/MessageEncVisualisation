@@ -68,28 +68,21 @@ export default function MonacoEditor({
         editorRef.current = null
       }
     }
-  }, [])  // Keep this dependency array empty to avoid recreation
+  }, []) 
 
-  // Handle prop changes separately
   useEffect(() => {
     if (editorRef.current) {
-      // Only update value if it differs from the editor's value
-      // and the editor doesn't have focus (to avoid cursor jumping)
       const currentValue = editorRef.current.getValue()
       if (value !== currentValue && !editorRef.current.hasTextFocus()) {
         editorRef.current.setValue(value)
       }
     }
   }, [value])
-
-  // Update editor options when props change
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.updateOptions({
         readOnly
       })
-      
-      // Update the language by changing the model
       if (monacoRef.current && editorRef.current.getModel()) {
         monacoRef.current.editor.setModelLanguage(editorRef.current.getModel()!, language)
       }

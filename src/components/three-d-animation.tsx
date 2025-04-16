@@ -434,7 +434,6 @@ export default function ThreeDAnimation({ method, encryptionInProgress, encrypti
     cert.position.set(0, 0.3, 0.31)
     padlockGroup.add(cert)
 
-    // Add checkmark on certificate
     const checkGeometry = new THREE.BufferGeometry()
     const checkVertices = new Float32Array([
       -0.2,
@@ -460,7 +459,6 @@ export default function ThreeDAnimation({ method, encryptionInProgress, encrypti
   const createDefaultObjects = () => {
     if (!sceneRef.current) return
 
-    // Create a simple sphere
     const geometry = new THREE.SphereGeometry(1, 32, 32)
     const material = new THREE.MeshStandardMaterial({
       color: 0x3b82f6,
